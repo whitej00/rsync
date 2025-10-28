@@ -6,10 +6,10 @@ SSH_PORT=2222
 USER_NAME="backup_user"
 PASSWORD="backup1234"
 
-# 1️⃣ 기존 컨테이너 제거
+# 1. 기존 컨테이너 제거
 docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 
-# 2️⃣ 새 Ubuntu 컨테이너 실행
+# 2. 새 Ubuntu 컨테이너 실행
 docker run -d \
   --name "$CONTAINER_NAME" \
   -p 127.0.0.1:${SSH_PORT}:22 \
@@ -18,7 +18,7 @@ docker run -d \
 
 echo "[+] Ubuntu 컨테이너 생성 완료"
 
-# 3️⃣ SSH + rsync 설치 및 backup 유저 생성
+# 3️. SSH + rsync 설치 및 backup 유저 생성
 docker exec -it "$CONTAINER_NAME" bash -c "
   set -e
   apt-get update -y &&
@@ -26,9 +26,8 @@ docker exec -it "$CONTAINER_NAME" bash -c "
   mkdir -p /var/run/sshd /backup/dummy_data &&
   useradd -m -s /bin/bash ${USER_NAME} &&
   echo '${USER_NAME}:${PASSWORD}' | chpasswd &&
-  systemctl enable ssh || true
   ssh-keygen -A
-  /usr/sbin/sshd
+  /usr/sbin/sshd -D & 
   chown -R backup_user:backup_user /backup
 "
 
@@ -38,7 +37,9 @@ echo ""
 echo "이제 아래 명령으로 공개키 등록하세요"
 echo "ssh-copy-id -i ~/.ssh/id_ed25519.pub -p ${SSH_PORT} ${USER_NAME}@localhost"
 echo ""
-echo "비밀번호는 '${PASSWORD}' 입니다."
+echo ""
+echo "에러 발생시, 컨테이너 접속 후 sshd 백그라운드 실행"
+echo ""
 echo ""
 echo "등록 후 테스트:"
 echo "ssh -p ${SSH_PORT} ${USER_NAME}@localhost"
